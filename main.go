@@ -6,15 +6,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
+	clientconfig "github.com/Jille/etcd-client-from-env"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/http01"
@@ -42,16 +41,11 @@ func main() {
 	}
 
 	log.Print("Connecting to etcd...")
-	var err error
-	c, err := clientv3.New(clientv3.Config{
-		Endpoints:   strings.Split(os.Getenv("ETCD_ENDPOINTS"), ","),
-		DialTimeout: 15 * time.Second,
-		TLS: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		Username: os.Getenv("ETCD_USER"),
-		Password: os.Getenv("ETCD_PASSWORD"),
-	})
+	cc, err := clientconfig.Get()
+	if err != nil {
+		log.Fatalf("Failed to parse environment settings: %v", err)
+	}
+	c, err := clientv3.New(cc)
 	if err != nil {
 		log.Fatalf("Failed to connect to etcd: %v", err)
 	}

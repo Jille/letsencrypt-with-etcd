@@ -3,6 +3,7 @@ module github.com/Jille/letsencrypt-with-etcd
 go 1.17
 
 require (
+	github.com/Jille/etcd-client-from-env v1.0.0
 	github.com/go-acme/lego/v4 v4.5.3
 	github.com/spf13/pflag v1.0.5
 	go.etcd.io/etcd/client/v3 v3.5.1

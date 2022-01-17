@@ -15,7 +15,9 @@ When trying to get this working, use `--staging` to talk to LetsEncrypt staging 
 ## Environment
 
 - `ETCD_ENDPOINTS` is where to find your etcd cluster
-- `ETCD_USER` and `ETCD_PASSWORD` are used to connect to etcd. No authentication is used if you leave them unset/empty.
+- `ETCD_USERNAME` and `ETCD_PASSWORD` are used to connect to etcd. No authentication is used if you leave them unset/empty.
+
+See https://github.com/Jille/etcd-client-from-env for more parameters for connecting to etcd.
 
 ## Flags
 
