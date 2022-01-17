@@ -1,12 +1,14 @@
 # letsencrypt-with-etcd
 
-This is a letsencrypt client that uses etcd as its storage. It stores your (automatically created) LetsEncrypt account in `/letsencrypt-with-etcd/account` and (by default) stores your certificate in `/letsencrypt-with-etcd/yourdomain-fullchain.pem` and private key in `/letsencrypt-with-etcd/yourdomain-key.pem`.
+This is a letsencrypt client that uses etcd as its storage. It stores your (automatically created) LetsEncrypt account in `/letsencrypt-with-etcd/production-account` and (by default) stores your certificate in `/letsencrypt-with-etcd/yourdomain-fullchain.pem` and private key in `/letsencrypt-with-etcd/yourdomain-key.pem`.
 
 It will refresh certificates if there's less than 1/3rd of the full expiry time remaining.
 
 It tries to reuse your private key, but always writes the new certificate and (possibly new) private key in an atomic transaction to etcd.
 
 You should forward requests to /.well-known/acme-challenge/ on your domains to this process.
+
+When trying to get this working, use `--staging` to talk to LetsEncrypt staging to avoid using up their rate limits quickly. Your account will be in `/letsencrypt-with-etcd/staging-account` instead.
 
 # Parameters
 

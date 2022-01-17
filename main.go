@@ -58,7 +58,12 @@ func main() {
 	defer c.Close()
 	log.Print("Connected.")
 
-	accountKey := "/letsencrypt-with-etcd/account"
+	var accountKey string
+	if *staging {
+		accountKey = "/letsencrypt-with-etcd/staging-account"
+	} else {
+		accountKey = "/letsencrypt-with-etcd/production-account"
+	}
 	fullChainKey := *certificateDirectory + (*domains)[0] + "-fullchain.pem"
 	keyKey := *certificateDirectory + (*domains)[0] + "-key.pem"
 
@@ -108,6 +113,8 @@ func main() {
 	config := lego.NewConfig(myUser)
 	if *staging {
 		config.CADirURL = lego.LEDirectoryStaging
+	} else {
+		config.CADirURL = lego.LEDirectoryProduction
 	}
 	config.UserAgent = "https://github.com/Jille/letsencrypt-with-etcd"
 
