@@ -30,6 +30,7 @@ var (
 	domains              = pflag.StringSliceP("domains", "d", nil, "List of domains to request a certificate for")
 	certificateDirectory = pflag.String("directory", "/letsencrypt-with-etcd/", "Directory to put certificates and private keys in")
 	staging              = pflag.Bool("staging", false, "Whether to use LetsEncrypt staging")
+	forceRenew           = pflag.Bool("force-renew", false, "Force renewal even if the certificate isn't expired")
 )
 
 func main() {
@@ -63,26 +64,28 @@ func main() {
 	fullChainKey := *certificateDirectory + (*domains)[0] + "-fullchain.pem"
 	keyKey := *certificateDirectory + (*domains)[0] + "-key.pem"
 
-	resp, err := c.Get(ctx, fullChainKey)
-	if err != nil {
-		log.Fatalf("Failed to fetch %s: %v", fullChainKey, err)
-	}
-	if len(resp.Kvs) > 0 {
-		crt, err := certcrypto.ParsePEMCertificate(resp.Kvs[0].Value)
+	if !*forceRenew {
+		resp, err := c.Get(ctx, fullChainKey)
 		if err != nil {
-			log.Printf("Failed to parse old private key for your certificate: %v", err)
-		} else {
-			totalValidity := crt.NotAfter.Sub(crt.NotBefore)
-			if crt.NotAfter.Add(-totalValidity / 3).After(time.Now()) {
-				log.Printf("Certificate is valid until %s. Not refreshing.", crt.NotAfter)
-				return
+			log.Fatalf("Failed to fetch %s: %v", fullChainKey, err)
+		}
+		if len(resp.Kvs) > 0 {
+			crt, err := certcrypto.ParsePEMCertificate(resp.Kvs[0].Value)
+			if err != nil {
+				log.Printf("Failed to parse old private key for your certificate: %v", err)
+			} else {
+				totalValidity := crt.NotAfter.Sub(crt.NotBefore)
+				if crt.NotAfter.Add(-totalValidity / 3).After(time.Now()) {
+					log.Printf("Certificate is valid until %s. Not refreshing.", crt.NotAfter)
+					return
+				}
 			}
 		}
 	}
 
 	var myUser MyUser
 
-	resp, err = c.Get(ctx, accountKey)
+	resp, err := c.Get(ctx, accountKey)
 	if err != nil {
 		log.Fatalf("Failed to fetch key %s from etcd: %v", accountKey, err)
 	}
