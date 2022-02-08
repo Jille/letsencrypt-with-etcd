@@ -6,10 +6,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 	"time"
 
@@ -31,6 +36,7 @@ var (
 	certificateDirectory = pflag.String("directory", "/letsencrypt-with-etcd/", "Directory to put certificates and private keys in")
 	staging              = pflag.Bool("staging", false, "Whether to use LetsEncrypt staging")
 	forceRenew           = pflag.Bool("force-renew", false, "Force renewal even if the certificate isn't expired")
+	selfSigned           = pflag.Bool("self-signed", false, "Don't contact LetsEncrypt and create a self-signed certificate")
 )
 
 func main() {
@@ -81,6 +87,37 @@ func main() {
 				}
 			}
 		}
+	}
+
+	if *selfSigned {
+		priv, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			log.Fatalf("Failed to generate private key: %v", err)
+		}
+		t := &x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject: pkix.Name{
+				CommonName: (*domains)[0],
+			},
+			DNSNames:              *domains,
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().AddDate(10, 0, 0),
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			BasicConstraintsValid: true,
+		}
+		crt, err := x509.CreateCertificate(rand.Reader, t, t, &priv.PublicKey, priv)
+		if err != nil {
+			log.Fatalf("Failed to self-sign certificate: %v", err)
+		}
+		if _, err := c.Txn(ctx).Then(
+			clientv3.OpPut(fullChainKey, string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: crt}))),
+			clientv3.OpPut(keyKey, string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}))),
+		).Commit(); err != nil {
+			log.Fatalf("Failed to write new certificate: %v", err)
+		}
+		log.Print("Generated new self signed certificate!")
+		return
 	}
 
 	var myUser MyUser
